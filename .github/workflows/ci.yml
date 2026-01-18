@@ -28,41 +28,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Scoop
+      - name: Install Scoop, add bucket, and install package
         shell: pwsh
         run: |
+          # Install Scoop
           Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
           irm get.scoop.sh | iex
 
-      - name: Add bucket and install pipx
-        shell: pwsh
-        run: |
-          # Add extras bucket for pipx
+          # Add Scoop to PATH for this session
+          $env:Path = "$env:USERPROFILE\scoop\shims;$env:Path"
+
+          # Add extras bucket and install pipx
           scoop bucket add extras
           scoop install pipx
           pipx ensurepath
 
-      - name: Add this bucket
-        shell: pwsh
-        run: |
+          # Add this bucket and install ossin
           scoop bucket add python-ankara-toplulugu ${{ github.workspace }}
-
-      - name: Install ossin
-        shell: pwsh
-        run: |
           scoop install python-ankara-toplulugu/ossin
 
       - name: Test ossin
         shell: pwsh
         run: |
-          # Refresh PATH to include pipx binaries
-          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
-          # Also add pipx default location
-          $pipxBin = "$env:USERPROFILE\.local\bin"
-          if (Test-Path $pipxBin) {
-            $env:Path += ";$pipxBin"
-          }
+          # Add Scoop and pipx to PATH
+          $env:Path = "$env:USERPROFILE\scoop\shims;$env:USERPROFILE\.local\bin;$env:Path"
 
           # Test the command
           ossin --help
