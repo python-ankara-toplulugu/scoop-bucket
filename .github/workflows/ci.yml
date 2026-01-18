@@ -63,13 +63,19 @@ jobs:
           scoop install pipx
           pipx ensurepath
 
+      - name: Add local bucket
+        shell: pwsh
+        run: |
+          # Scoop expects a Git URL for bucket add, so for local testing
+          # we manually copy the bucket files to Scoop's bucket directory
+          $bucketDir = "$env:USERPROFILE\scoop\buckets\python-ankara-toplulugu"
+          New-Item -ItemType Directory -Path "$bucketDir\bucket" -Force
+          Copy-Item -Path "${{ github.workspace }}\bucket\*" -Destination "$bucketDir\bucket\" -Recurse
+
       - name: Install ${{ matrix.package }}
         shell: pwsh
         run: |
           $env:Path = "$env:USERPROFILE\scoop\shims;$env:Path"
-
-          # Add this bucket and install the package
-          scoop bucket add python-ankara-toplulugu ${{ github.workspace }}
           scoop install python-ankara-toplulugu/${{ matrix.package }}
 
       - name: Test ${{ matrix.package }}
