@@ -33,7 +33,27 @@ GitHub Actions runs on every PR:
 
 ## Version Updates
 
-When upstream releases a new version:
+Two automated workflows handle version updates (mirroring homebrew-tap):
 
-1. Update `version` field in manifest
-2. CI will verify it matches PyPI
+**Polling** (`update-manifests.yml`):
+
+- Runs weekly on Mondays at 9:00 UTC
+- Checks all packages against PyPI
+- Creates a PR if updates are found
+- Supports `--package` input to target a specific package
+- Supports `--dry_run` to check without creating PR
+
+**Push-based** (`update-manifest-dispatch.yml`):
+
+- Triggered via `repository_dispatch` from package repos
+- Instant updates after PyPI publish
+- Package repos can trigger with:
+  ```bash
+  curl -X POST \
+    -H "Authorization: token $GITHUB_TOKEN" \
+    -H "Accept: application/vnd.github.v3+json" \
+    https://api.github.com/repos/python-ankara-toplulugu/scoop-bucket/dispatches \
+    -d '{"event_type":"update-manifest","client_payload":{"package":"ossin"}}'
+  ```
+
+**Manual**: Trigger the update-manifests workflow from GitHub Actions, or update the `version` field in manifest directly.

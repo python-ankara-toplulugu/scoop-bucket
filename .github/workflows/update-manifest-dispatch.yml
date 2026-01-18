@@ -1,0 +1,113 @@
+name: Update Manifest (Dispatch)
+
+# Triggered by package repos after PyPI publish
+on:
+  repository_dispatch:
+    types: [update-manifest]
+
+# Expected payload:
+# {
+#   "package": "ossin",           # Package name (required)
+#   "version": "0.2.0",           # New version (optional, will check PyPI if not provided)
+#   "pypi_name": "ossin"          # PyPI package name (optional, defaults to package name)
+# }
+
+jobs:
+  update:
+    name: Update ${{ github.event.client_payload.package }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate payload
+        run: |
+          if [ -z "${{ github.event.client_payload.package }}" ]; then
+            echo "Error: 'package' is required in client_payload"
+            exit 1
+          fi
+
+          package="${{ github.event.client_payload.package }}"
+          if [ ! -f "bucket/${package}.json" ]; then
+            echo "Error: Manifest '${package}' not found"
+            exit 1
+          fi
+
+          echo "Updating manifest: ${package}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check for update
+        id: check
+        run: |
+          package="${{ github.event.client_payload.package }}"
+          pypi_name="${{ github.event.client_payload.pypi_name || github.event.client_payload.package }}"
+          manifest="bucket/${package}.json"
+
+          # Get current version from manifest
+          current_version=$(python -c "import json; print(json.load(open('$manifest'))['version'])")
+
+          # Get latest version from PyPI
+          pypi_version=$(curl -s "https://pypi.org/pypi/${pypi_name}/json" | python -c "import sys, json; print(json.load(sys.stdin)['info']['version'])" 2>/dev/null || echo "NOT_FOUND")
+
+          echo "Package: $package"
+          echo "  Current: $current_version"
+          echo "  PyPI: $pypi_version"
+
+          if [ "$pypi_version" = "NOT_FOUND" ]; then
+            echo "Error: Package not found on PyPI"
+            exit 1
+          fi
+
+          if [ "$pypi_version" != "$current_version" ]; then
+            echo "has_update=true" >> $GITHUB_OUTPUT
+            echo "version=$pypi_version" >> $GITHUB_OUTPUT
+            echo "current_version=$current_version" >> $GITHUB_OUTPUT
+            echo "Update available: $current_version → $pypi_version"
+          else
+            echo "has_update=false" >> $GITHUB_OUTPUT
+            echo "Manifest is already up to date"
+          fi
+
+      - name: Update manifest
+        if: steps.check.outputs.has_update == 'true'
+        run: |
+          package="${{ github.event.client_payload.package }}"
+          version="${{ steps.check.outputs.version }}"
+          manifest="bucket/${package}.json"
+
+          python -c "
+          import json
+          with open('$manifest', 'r') as f:
+              data = json.load(f)
+          data['version'] = '$version'
+          with open('$manifest', 'w') as f:
+              json.dump(data, f, indent=4)
+              f.write('\n')
+          "
+
+          echo "Updated $package to $version"
+
+      - name: Create Pull Request
+        if: steps.check.outputs.has_update == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(${{ github.event.client_payload.package }}): update to ${{ steps.check.outputs.version }}"
+          title: "chore(${{ github.event.client_payload.package }}): update to ${{ steps.check.outputs.version }}"
+          body: |
+            Automated update triggered by package release.
+
+            - **Package**: `${{ github.event.client_payload.package }}`
+            - **Version**: `${{ steps.check.outputs.current_version }}` → `${{ steps.check.outputs.version }}`
+
+            ---
+            *Triggered by repository_dispatch from package repo.*
+          branch: auto-update/${{ github.event.client_payload.package }}
+          delete-branch: true
+          labels: automated,dependencies
