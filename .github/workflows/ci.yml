@@ -11,8 +11,9 @@ jobs:
   lint:
     name: Lint manifests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Validate JSON syntax
         run: |
@@ -24,29 +25,31 @@ jobs:
   discover:
     name: Discover packages
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       packages: ${{ steps.find.outputs.packages }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Find all packages
         id: find
         run: |
           # Get all package names (without .json extension)
           packages=$(ls bucket/*.json 2>/dev/null | xargs -n1 basename | sed 's/\.json$//' | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "packages=$packages" >> $GITHUB_OUTPUT
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
           echo "Found packages: $packages"
 
   test:
     name: Test ${{ matrix.package }}
     runs-on: windows-latest
+    timeout-minutes: 30
     needs: [lint, discover]
     strategy:
       fail-fast: false
       matrix:
         package: ${{ fromJson(needs.discover.outputs.packages) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install Scoop and dependencies
         shell: pwsh
@@ -91,8 +94,9 @@ jobs:
   checkver:
     name: Check versions
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Check all package versions against PyPI
         run: |

@@ -20,14 +20,14 @@ jobs:
   check-updates:
     name: Check for updates
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       updates: ${{ steps.check.outputs.updates }}
       has_updates: ${{ steps.check.outputs.has_updates }}
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
@@ -78,31 +78,32 @@ jobs:
             fi
           done
 
-          echo "updates=$updates" >> $GITHUB_OUTPUT
+          echo "updates=$updates" >> "$GITHUB_OUTPUT"
 
           # Check if there are any updates
           count=$(echo "$updates" | python -c "import sys, json; print(len(json.load(sys.stdin)))")
           if [ "$count" -gt 0 ]; then
-            echo "has_updates=true" >> $GITHUB_OUTPUT
+            echo "has_updates=true" >> "$GITHUB_OUTPUT"
             echo "Found $count package(s) with updates available"
           else
-            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "has_updates=false" >> "$GITHUB_OUTPUT"
             echo "All packages are up to date"
           fi
 
   update-manifests:
     name: Update manifests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: check-updates
     if: needs.check-updates.outputs.has_updates == 'true' && inputs.dry_run != true
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
@@ -153,10 +154,10 @@ jobs:
             echo '---'
             echo '*This PR was automatically created by the update-manifests workflow.*'
             echo 'EOF'
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: update package versions"
