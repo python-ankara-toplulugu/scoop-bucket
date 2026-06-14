@@ -31,7 +31,10 @@ jobs:
         id: find
         run: |
           # Get all package names (without .json extension)
-          packages=$(ls bucket/*.json 2>/dev/null | xargs -n1 basename | sed 's/\.json$//' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          packages=$(
+            for f in bucket/*.json; do basename "$f" .json; done \
+              | jq -R -s -c 'split("\n") | map(select(length > 0))'
+          )
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
           echo "Found packages: $packages"
   test:
@@ -98,7 +101,11 @@ jobs:
             manifest_version=$(python -c "import json; print(json.load(open('$manifest'))['version'])")
 
             # Get version from PyPI
-            pypi_version=$(curl -s "https://pypi.org/pypi/$package/json" | python -c "import sys, json; print(json.load(sys.stdin)['info']['version'])" 2>/dev/null || echo "NOT_FOUND")
+            pypi_version=$(
+              curl -s "https://pypi.org/pypi/$package/json" \
+                | python -c "import sys, json; print(json.load(sys.stdin)['info']['version'])" \
+                2>/dev/null || echo "NOT_FOUND"
+            )
 
             echo "Package: $package"
             echo "  Manifest: $manifest_version"

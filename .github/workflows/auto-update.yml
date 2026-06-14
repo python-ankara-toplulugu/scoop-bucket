@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
       - name: Check for manifest updates
@@ -47,7 +47,11 @@ jobs:
             manifest_version=$(python -c "import json; print(json.load(open('$manifest'))['version'])")
 
             # Get version from PyPI
-            pypi_version=$(curl -s "https://pypi.org/pypi/$package/json" | python -c "import sys, json; print(json.load(sys.stdin)['info']['version'])" 2>/dev/null || echo "NOT_FOUND")
+            pypi_version=$(
+              curl -s "https://pypi.org/pypi/$package/json" \
+                | python -c "import sys, json; print(json.load(sys.stdin)['info']['version'])" \
+                2>/dev/null || echo "NOT_FOUND"
+            )
 
             echo "Package: $package"
             echo "  Manifest: $manifest_version"
@@ -99,14 +103,14 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
       - name: Update manifests
         id: update
         run: |
           updates='${{ needs.check-updates.outputs.updates }}'
-          > /tmp/updates.txt
+          : > /tmp/updates.txt
 
           echo "$updates" | python -c "
           import sys, json

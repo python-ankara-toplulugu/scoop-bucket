@@ -6,7 +6,7 @@ yamllint = "latest"
 
 [tasks."style"]
 description = "Format and lint all YAML files"
-depends = ["style:fix", "style:check"]
+run = [{ task = "style:fix" }, { task = "style:check" }]
 
 [tasks."style:fix"]
 description = "Format YAML files in place"
