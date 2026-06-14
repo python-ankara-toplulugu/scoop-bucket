@@ -1,5 +1,5 @@
+---
 name: Update Manifests
-
 on:
   schedule:
     # Run weekly on Mondays at 9:00 UTC
@@ -15,7 +15,6 @@ on:
         required: false
         type: boolean
         default: false
-
 jobs:
   check-updates:
     name: Check for updates
@@ -25,12 +24,11 @@ jobs:
       updates: ${{ steps.check.outputs.updates }}
       has_updates: ${{ steps.check.outputs.has_updates }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v5
         with:
           python-version: "3.12"
-
       - name: Check for manifest updates
         id: check
         run: |
@@ -89,7 +87,6 @@ jobs:
             echo "has_updates=false" >> "$GITHUB_OUTPUT"
             echo "All packages are up to date"
           fi
-
   update-manifests:
     name: Update manifests
     runs-on: ubuntu-latest
@@ -100,13 +97,11 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v5
         with:
           python-version: "3.12"
-
       - name: Update manifests
         id: update
         run: |
@@ -140,7 +135,6 @@ jobs:
           for u in updates:
               print(f'- **{u[\"package\"]}**: {u[\"current_version\"]} → {u[\"latest_version\"]}')
           " > /tmp/updates.txt
-
       - name: Read updates list
         id: body
         run: |
@@ -155,9 +149,8 @@ jobs:
             echo '*This PR was automatically created by the update-manifests workflow.*'
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
-
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v7
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1  # v8.1.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: update package versions"
