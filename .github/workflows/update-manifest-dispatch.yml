@@ -1,17 +1,15 @@
+---
 name: Update Manifest (Dispatch)
-
 # Triggered by package repos after PyPI publish
 on:
   repository_dispatch:
     types: [update-manifest]
-
 # Expected payload:
 # {
 #   "package": "ossin",           # Package name (required)
 #   "version": "0.2.0",           # New version (optional, will check PyPI if not provided)
 #   "pypi_name": "ossin"          # PyPI package name (optional, defaults to package name)
 # }
-
 jobs:
   update:
     name: Update ${{ github.event.client_payload.package }}
@@ -21,8 +19,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
       - name: Validate payload
         run: |
           if [ -z "${{ github.event.client_payload.package }}" ]; then
@@ -37,12 +34,10 @@ jobs:
           fi
 
           echo "Updating manifest: ${package}"
-
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
-
       - name: Check for update
         id: check
         run: |
@@ -54,7 +49,11 @@ jobs:
           current_version=$(python -c "import json; print(json.load(open('$manifest'))['version'])")
 
           # Get latest version from PyPI
-          pypi_version=$(curl -s "https://pypi.org/pypi/${pypi_name}/json" | python -c "import sys, json; print(json.load(sys.stdin)['info']['version'])" 2>/dev/null || echo "NOT_FOUND")
+          pypi_version=$(
+            curl -s "https://pypi.org/pypi/${pypi_name}/json" \
+              | python -c "import sys, json; print(json.load(sys.stdin)['info']['version'])" \
+              2>/dev/null || echo "NOT_FOUND"
+          )
 
           echo "Package: $package"
           echo "  Current: $current_version"
@@ -66,15 +65,16 @@ jobs:
           fi
 
           if [ "$pypi_version" != "$current_version" ]; then
-            echo "has_update=true" >> "$GITHUB_OUTPUT"
-            echo "version=$pypi_version" >> "$GITHUB_OUTPUT"
-            echo "current_version=$current_version" >> "$GITHUB_OUTPUT"
+            {
+              echo "has_update=true"
+              echo "version=$pypi_version"
+              echo "current_version=$current_version"
+            } >> "$GITHUB_OUTPUT"
             echo "Update available: $current_version → $pypi_version"
           else
             echo "has_update=false" >> "$GITHUB_OUTPUT"
             echo "Manifest is already up to date"
           fi
-
       - name: Update manifest
         if: steps.check.outputs.has_update == 'true'
         run: |
@@ -93,14 +93,15 @@ jobs:
           "
 
           echo "Updated $package to $version"
-
       - name: Create Pull Request
         if: steps.check.outputs.has_update == 'true'
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v7
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1  # v8.1.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(${{ github.event.client_payload.package }}): update to ${{ steps.check.outputs.version }}"
-          title: "chore(${{ github.event.client_payload.package }}): update to ${{ steps.check.outputs.version }}"
+          commit-message: >-
+            chore(${{ github.event.client_payload.package }}): update to ${{ steps.check.outputs.version }}
+          title: >-
+            chore(${{ github.event.client_payload.package }}): update to ${{ steps.check.outputs.version }}
           body: |
             Automated update triggered by package release.
 
