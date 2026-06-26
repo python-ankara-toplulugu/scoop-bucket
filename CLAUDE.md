@@ -12,6 +12,9 @@ Packages use **pipx** for installation rather than direct downloads:
 
 - `bucket/*.json` - Scoop manifests that depend on pipx
 - `scripts/noop.ps1` - Placeholder file (Scoop requires a URL, but pipx handles actual install)
+- `scripts/update_manifests.py` - Bumps each manifest's `version` from PyPI, read
+  via its `checkver.url` + `checkver.jsonpath`. Both update workflows call it; run
+  it locally with `python scripts/update_manifests.py [package] [--dry-run]`.
 - Manifests use `checkver.jsonpath` to auto-detect new versions from PyPI
 
 ## Adding a New Package
@@ -35,13 +38,12 @@ GitHub Actions runs on every PR:
 
 Two automated workflows handle version updates (mirroring homebrew-tap):
 
-**Polling** (`update-manifests.yml`):
+**Polling** (`auto-update.yml`):
 
 - Runs weekly on Mondays at 9:00 UTC
-- Checks all packages against PyPI
-- Creates a PR if updates are found
-- Supports `--package` input to target a specific package
-- Supports `--dry_run` to check without creating PR
+- Runs `scripts/update_manifests.py` over all manifests and opens a PR if updates are found
+- Supports a `package` input to target a specific package
+- Supports a `dry_run` input to check without creating a PR
 
 **Push-based** (`update-manifest-dispatch.yml`):
 
@@ -56,4 +58,4 @@ Two automated workflows handle version updates (mirroring homebrew-tap):
     -d '{"event_type":"update-manifest","client_payload":{"package":"ossin"}}'
   ```
 
-**Manual**: Trigger the update-manifests workflow from GitHub Actions, or update the `version` field in manifest directly.
+**Manual**: Trigger the Update Manifests workflow from GitHub Actions, or update the `version` field in manifest directly.
