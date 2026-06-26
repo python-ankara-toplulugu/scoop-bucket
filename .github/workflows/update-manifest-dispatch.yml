@@ -20,30 +20,45 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Validate payload
+        # Payload is passed via env (never inlined into the shell) to avoid
+        # ${{ }} template-injection from the dispatch client_payload.
+        env:
+          PACKAGE: ${{ github.event.client_payload.package }}
         run: |
-          package="${{ github.event.client_payload.package }}"
-          if [ -z "$package" ]; then
+          if [ -z "$PACKAGE" ]; then
             echo "::error::'package' is required in client_payload"
             exit 1
           fi
-          if [ ! -f "bucket/${package}.json" ]; then
-            echo "::error::manifest 'bucket/${package}.json' not found"
+          if [ ! -f "bucket/${PACKAGE}.json" ]; then
+            echo "::error::manifest 'bucket/${PACKAGE}.json' not found"
             exit 1
           fi
-          echo "Updating manifest: ${package}"
+          echo "Updating manifest: ${PACKAGE}"
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
       - name: Update manifest
         id: update
+        env:
+          PACKAGE: ${{ github.event.client_payload.package }}
         run: |
           {
             echo 'summary<<SUMMARY_EOF'
-            python scripts/update_manifests.py "${{ github.event.client_payload.package }}"
+            python scripts/update_manifests.py "$PACKAGE"
             echo 'SUMMARY_EOF'
           } >> "$GITHUB_OUTPUT"
+          # A dispatch is fired in response to a publish, so "nothing changed"
+          # is a signal worth surfacing — the script may have hit a misconfigured
+          # checkver.url, a JSONPath drift, or a yank (see the logs above).
+          if [ -n "$(git status --porcelain bucket/)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::no manifest change for '$PACKAGE' — already up to date, or a checkver/yank issue (see the update step logs)"
+          fi
       - name: Create Pull Request
+        if: steps.update.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1  # v8.1.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

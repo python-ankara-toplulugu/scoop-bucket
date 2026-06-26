@@ -31,15 +31,21 @@ jobs:
           python-version: "3.12"
       - name: Update manifests
         id: update
+        # Inputs are passed via env (never inlined into the shell) to avoid
+        # ${{ }} template-injection into the run block.
+        env:
+          PACKAGE: ${{ inputs.package }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           # On a dry run, --dry-run reports without writing (and the PR step
           # below is skipped); otherwise the script bumps the manifests in place
           # and peter-evans opens a PR only if something actually changed.
-          dry=""
-          if [ "${{ inputs.dry_run }}" = "true" ]; then dry="--dry-run"; fi
+          args=""
+          [ -n "$PACKAGE" ] && args="$PACKAGE"
+          [ "$DRY_RUN" = "true" ] && args="$args --dry-run"
           {
             echo 'summary<<SUMMARY_EOF'
-            python scripts/update_manifests.py ${{ inputs.package }} $dry
+            python scripts/update_manifests.py $args
             echo 'SUMMARY_EOF'
           } >> "$GITHUB_OUTPUT"
       - name: Create Pull Request
