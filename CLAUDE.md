@@ -15,6 +15,7 @@ Packages use **pipx** for installation rather than direct downloads:
 - `scripts/update_manifests.py` - Bumps each manifest's `version` from PyPI, read
   via its `checkver.url` + `checkver.jsonpath`. Both update workflows call it; run
   it locally with `python scripts/update_manifests.py [package] [--dry-run]`.
+  Tested by `tests/test_update_manifests.py` (`python -m unittest discover tests`).
 - Manifests use `checkver.jsonpath` to auto-detect new versions from PyPI
 
 ## Adding a New Package
